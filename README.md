@@ -1,2 +1,3 @@
 # 6G-SCRAPE
 social nets scraper. 6G-SCRAPE is just a tool we use in our research.
+raw .csv . unrelated 6G data is surely present! time to clean...
