@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6G-SCRAPEFED</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#151f2e', // Custom dark shade
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617; /* slate-950 */
+            color: #e2e8f0; /* slate-200 */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom loader */
+        .loader {
+            border: 3px solid rgba(99, 102, 241, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #6366f1;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="font-sans h-screen flex overflow-hidden selection:bg-indigo-500 selection:text-white bg-slate-950">
+
+    <!-- Mobile Header (Visible only on mobile) -->
+    <div class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 z-40">
+        <div class="flex items-center gap-2">
+            <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+            </div>
+            <span class="font-bold text-slate-100 tracking-tight">6G-FED</span>
+        </div>
+        <button id="mobile-menu-btn" class="p-2 text-slate-400 hover:text-white">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50 flex flex-col">
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-slate-800">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 mr-3">
+                <i data-lucide="share-2" class="w-5 h-5"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-100">
+                6G-SCRAPE<span class="text-indigo-500">FED</span>
+            </h1>
+            <!-- Close btn for mobile -->
+            <button id="close-sidebar" class="lg:hidden ml-auto text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+            <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Feeds</p>
+            
+            <button onclick="filterPosts('ALL')" id="nav-all" class="nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600/10 border border-indigo-600/20">
+                <i data-lucide="layout-grid" class="w-5 h-5 text-indigo-400"></i>
+                All Posts
+            </button>
+            
+            <div id="platform-nav-container" class="space-y-1 pt-1">
+                <!-- Platform links injected here -->
+            </div>
+        </nav>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-slate-800 flex items-center justify-between">
+            <a href="https://stop6g.eu" target="_blank" class="text-xs text-slate-500 hover:text-indigo-400 transition-colors font-medium">stop6g.eu</a>
+            <button id="download-csv-btn" class="text-slate-500 hover:text-white transition-colors p-1.5 rounded-md hover:bg-slate-800" title="Download CSV">
+                <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full lg:ml-64 pt-16 lg:pt-0 relative">
+        
+        <!-- Toolbar / Header -->
+        <header class="h-16 bg-slate-950/80 backdrop-blur border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-20">
+            <h2 id="page-title" class="text-lg font-semibold text-slate-100">All Posts</h2>
+            <div class="text-xs text-slate-500 hidden sm:block">
+                Last updated: <span id="last-updated">...</span>
+            </div>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-6 scroll-smooth" id="main-scroll">
+            
+            <!-- Loader -->
+            <div id="loader" class="flex flex-col items-center justify-center h-full text-slate-500 gap-4 min-h-[50vh]">
+                <div class="loader"></div>
+                <p class="animate-pulse font-medium text-sm">Fetching social data...</p>
+            </div>
+
+            <!-- Error -->
+            <div id="error-container" class="hidden max-w-lg mx-auto mt-10 bg-red-900/20 border border-red-900/50 rounded-xl p-6 text-center text-red-400">
+                <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                <p id="error-message">Error loading data.</p>
+            </div>
+
+            <!-- Posts Grid -->
+            <div id="posts-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10 hidden">
+                <!-- Posts injected here -->
+            </div>
+             <!-- Empty State (hidden by default) -->
+             <div id="empty-state" class="hidden flex flex-col items-center justify-center h-64 text-slate-600">
+                <i data-lucide="inbox" class="w-10 h-10 mb-3 opacity-20"></i>
+                <p>No posts found for this filter.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal-overlay" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity duration-200 opacity-0 pointer-events-none" aria-hidden="true">
+        <div id="modal-content" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-95 duration-200">
+            <div class="relative p-6 border-b border-slate-800 bg-slate-800/30">
+                <div class="flex items-center justify-between">
+                    <div id="modal-platform-badge-container">
+                         <!-- Badge injected here -->
+                    </div>
+                    <button id="modal-close" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <h3 id="modal-author" class="mt-4 text-lg font-bold text-slate-100 flex items-center gap-2"></h3>
+                <p id="modal-date" class="text-sm text-slate-500 flex items-center gap-2 mt-1"></p>
+            </div>
+            
+            <div class="p-6 max-h-[60vh] overflow-y-auto">
+                <p id="modal-text" class="text-slate-300 leading-relaxed whitespace-pre-wrap text-base"></p>
+                <!-- Cleaned up: No category section here anymore -->
+            </div>
+
+            <div class="p-4 bg-slate-950/50 border-t border-slate-800 flex justify-end">
+                <a id="modal-link" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg hover:shadow-indigo-900/20 active:scale-95">
+                    View Original Post <i data-lucide="external-link" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State ---
+        let allPosts = [];
+        let currentFilter = 'ALL';
+        let platformsList = [];
+        let rawCsvContent = '';
+
+        // --- SVGs ---
+        function getPlatformIcon(platform) {
+            const p = platform.toLowerCase().trim();
+            if (p === 'bluesky') {
+                return `<svg viewBox="0 0 560 500" class="w-4 h-4 fill-current"><path d="M123.12 68.32C178.65 19.36 270.97 32 280 32c9.03 0 101.35-12.64 156.88 36.32 58.74 51.78 69.1 163.67 22.84 216.57-22.18 25.36-41.22 25.2-61.64 24.38 31.9 14.8 68.62 39.84 63.85 91.56-4.94 53.53-70.16 85.5-116.48 83.18-29.35-1.47-59.88-26.8-152.09-119.85l-12.66-12.82-12.66 12.82C75.88 456.82 45.35 482.15 16 483.62c-46.32 2.32-111.54-29.65-116.48-83.18-4.77-51.72 31.95-76.76 63.85-91.56-20.42.82-39.46.98-61.64-24.38-46.26-52.9-35.9-164.79 22.84-216.57z"/></svg>`;
+            } else if (p === 'mastodon') {
+                return `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M21.327 8.566c0-4.339-2.843-5.61-2.843-5.61-1.433-.658-3.894-.935-6.451-.956h-.063c-2.557.021-5.016.298-6.45.956 0 0-2.843 1.272-2.843 5.61 0 .993-.019 2.181.012 3.441.103 4.243.778 8.425 4.701 9.463 1.809.479 3.362.579 4.612.51 2.268-.126 3.541-.809 3.541-.809l-.075-1.646s-1.621.511-3.441.449c-1.804-.062-3.707-.194-3.999-2.409a4.523 4.523 0 0 1-.04-.621s1.77.433 4.014.536c1.066.049 2.146-.051 3.029-.282 2.986-.783 3.523-4.41 3.499-7.561.008-2.073-.297-3.657-.297-3.657zM10.788 14.701H8.531V8.261h2.257v6.44zm2.922-3.245H12.44V8.666h1.27v2.79zm2.062 3.245h-2.256V8.261h2.256v6.44z"/></svg>`;
+            } else if (p === 'pixelfed') {
+                return `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-5.5h2c1.93 0 3.5-1.57 3.5-3.5S13.93 7.5 12 7.5h-2v7zm0-5.5h2c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-2V9z"/></svg>`;
+            } else if (p === 'lemmy') {
+                // New Icon for Lemmy (Network/Link style for link aggregator)
+                return `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`;
+            } else {
+                return `<i data-lucide="layers" class="w-4 h-4"></i>`;
+            }
+        }
+
+        function getPlatformColorClass(platform) {
+            const p = platform.toLowerCase().trim();
+            if (p === 'bluesky') return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+            if (p === 'mastodon') return 'text-purple-400 bg-purple-400/10 border-purple-400/20';
+            if (p === 'pixelfed') return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+            if (p === 'lemmy') return 'text-orange-400 bg-orange-400/10 border-orange-400/20'; // Orange for Lemmy
+            return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
+        }
+
+        // --- Logic ---
+        
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') { currentCell += '"'; i++; } 
+                    else { inQuotes = !inQuotes; }
+                } else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (currentCell || currentRow.length > 0) {
+                        currentRow.push(currentCell.trim());
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                    if (char === '\r' && nextChar === '\n') i++;
+                } else { currentCell += char; }
+            }
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        function filterPosts(filter) {
+            currentFilter = filter;
+            renderPosts();
+            updateActiveNav();
+            
+            // On mobile, close sidebar after selection
+            if (window.innerWidth < 1024) {
+               toggleSidebar(false);
+            }
+            
+            // Scroll to top
+            document.getElementById('main-scroll').scrollTop = 0;
+            
+            // Update Title
+            const titleEl = document.getElementById('page-title');
+            titleEl.textContent = filter === 'ALL' ? 'All Posts' : filter;
+        }
+
+        function updateActiveNav() {
+            // Reset all
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.className = "nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors";
+            });
+
+            // Set active
+            const activeId = currentFilter === 'ALL' ? 'nav-all' : `nav-${currentFilter}`;
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.className = "nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600/10 border border-indigo-600/20 shadow-sm";
+            }
+        }
+
+        function renderNav(platforms) {
+            const container = document.getElementById('platform-nav-container');
+            container.innerHTML = '';
+            
+            platforms.forEach(platform => {
+                const btn = document.createElement('button');
+                btn.id = `nav-${platform}`;
+                btn.onclick = () => filterPosts(platform);
+                btn.className = "nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors";
+                
+                // Icon wrapper
+                const iconColor = getPlatformColorClass(platform).split(' ')[0]; 
+                
+                btn.innerHTML = `
+                    <div class="${iconColor}">
+                        ${getPlatformIcon(platform)}
+                    </div>
+                    <span>${platform}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderPosts() {
+            const grid = document.getElementById('posts-grid');
+            const empty = document.getElementById('empty-state');
+            grid.innerHTML = '';
+
+            let filtered = allPosts;
+            if (currentFilter !== 'ALL') {
+                filtered = allPosts.filter(p => p.platform === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            filtered.forEach((post, index) => {
+                // Card Logic
+                const card = document.createElement('div');
+                card.className = "group bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-sm hover:shadow-xl hover:border-slate-700 transition-all cursor-pointer relative overflow-hidden flex flex-col h-full fade-in";
+                card.style.animationDelay = `${index * 50}ms`; // Stagger effect
+
+                // Platform Badge (Small, top right)
+                const platformColorClass = getPlatformColorClass(post.platform);
+                
+                const dateStr = new Date(post.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+                const authorInitials = post.author.slice(0, 2).toUpperCase();
+                const previewText = post.text.length > 140 ? post.text.substring(0, 140) + '...' : post.text;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold text-xs border border-slate-700 shadow-inner">
+                                ${authorInitials}
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-slate-200 leading-tight">${post.author}</span>
+                                <span class="text-xs text-slate-500">${dateStr}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <span class="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${platformColorClass}">
+                                ${getPlatformIcon(post.platform)}
+                                ${post.platform}
+                             </span>
+                        </div>
+                    </div>
+
+                    <p class="text-slate-400 text-sm leading-relaxed flex-1 mb-4">
+                        ${previewText.replace(/^"|"$/g, '')}
+                    </p>
+                    
+                    <div class="mt-auto flex items-center justify-between pt-4 border-t border-slate-800/50">
+                        <div class="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0 duration-300 ml-auto">
+                             <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => openModal(post));
+                grid.appendChild(card);
+            });
+            
+            lucide.createIcons();
+        }
+
+        // --- Modal Logic ---
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalContent = document.getElementById('modal-content');
+        const modalCloseBtn = document.getElementById('modal-close');
+
+        function openModal(post) {
+            // Badge
+            const badgeContainer = document.getElementById('modal-platform-badge-container');
+            const colorClass = getPlatformColorClass(post.platform);
+            badgeContainer.innerHTML = `
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border ${colorClass}">
+                    ${getPlatformIcon(post.platform)}
+                    ${post.platform}
+                </span>
+            `;
+
+            document.getElementById('modal-author').innerHTML = `<i data-lucide="user" class="w-4 h-4 text-slate-500"></i> ${post.author}`;
+            document.getElementById('modal-date').innerHTML = `<i data-lucide="calendar" class="w-3 h-3"></i> ${new Date(post.date).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}`;
+            document.getElementById('modal-text').textContent = post.text.replace(/^"|"$/g, '');
+            // Removed Category Logic here
+            document.getElementById('modal-link').href = post.link;
+
+            lucide.createIcons();
+
+            modalOverlay.classList.remove('pointer-events-none', 'opacity-0');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.add('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+        }
+
+        modalCloseBtn.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        // --- Mobile Sidebar Logic ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+
+        function toggleSidebar(show) {
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+        }
+
+        mobileMenuBtn.addEventListener('click', () => toggleSidebar(true));
+        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+        // --- Download Logic ---
+        const downloadBtn = document.getElementById('download-csv-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                if (!rawCsvContent) return;
+                
+                const blob = new Blob([rawCsvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'fed_social_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const DATA_URL = 'https://raw.githubusercontent.com/stop6G/6G-SCRAPE/refs/heads/main/fed_social_data.csv';
+            const loader = document.getElementById('loader');
+
+            fetch(DATA_URL)
+                .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
+                .then(text => {
+                    rawCsvContent = text; // Save raw content for download
+
+                    const rows = parseCSV(text);
+                    const dataRows = rows.slice(1);
+                    
+                    // Process Data - UPDATED MAPPING FOR NO CATEGORIES
+                    // CSV: Platform, Author, Text, Date, Link
+                    allPosts = dataRows.map(row => {
+                        if (row.length < 5) return null; // Adjusted for 5 cols
+                        
+                        // Fix names
+                        let platformName = row[0].trim();
+                        if (platformName.toLowerCase() === 'pixelfeed') platformName = 'Pixelfed';
+                        if (platformName.toLowerCase() === 'lemmy') platformName = 'Lemmy';
+
+                        return {
+                            platform: platformName,
+                            // Category removed
+                            author: row[1],
+                            text: row[2],
+                            date: row[3],
+                            link: row[4]
+                        };
+                    }).filter(Boolean);
+
+                    // Sort chronologically (newest first)
+                    allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                    // Update "Last updated" with the newest date
+                    if (allPosts.length > 0) {
+                        const newestDate = new Date(allPosts[0].date);
+                        const dateStr = newestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        document.getElementById('last-updated').textContent = dateStr;
+                    }
+
+                    // Extract unique platforms
+                    platformsList = [...new Set(allPosts.map(p => p.platform))];
+
+                    // Render
+                    renderNav(platformsList);
+                    renderPosts(); // Defaults to ALL
+
+                    loader.classList.add('hidden');
+                })
+                .catch(err => {
+                    console.error(err);
+                    loader.classList.add('hidden');
+                    document.getElementById('error-container').classList.remove('hidden');
+                });
+                
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
